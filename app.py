@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
-import os, webbrowser
-from threading import Timer
-from g4f.client import Client
+import os
 from flask import Flask, request, render_template_string
 
 # ---------------------- تنظیمات ----------------------
-MODEL_NAME = "gpt-4o-mini"
-
 SYSTEM_PROMPT_FA = (
     "تو یک دستیار فارسی هستی که فقط و فقط به پرسش‌های مربوط به ماشین پراید پاسخ می‌دهی. "
     "اگر سوال خارج از موضوع پراید بود، صریح بگو: «من فقط درباره پراید پاسخ می‌دهم»."
@@ -15,9 +11,10 @@ SYSTEM_PROMPT_FA = (
 
 # ---------------------- ابزارها ----------------------
 def ask_g4f(messages):
+    from g4f.client import Client
     client = Client()
     resp = client.chat.completions.create(
-        model=MODEL_NAME,
+        model="gpt-4o-mini",   # یا gpt-3.5-turbo اگر مشکلی بود
         messages=messages,
         temperature=0.2,
         max_tokens=500,
@@ -28,6 +25,7 @@ def ask_g4f(messages):
 app = Flask(__name__)
 history = [{"role": "system", "content": SYSTEM_PROMPT_FA}]
 
+# ---------------------- رابط وب ----------------------
 HTML_TEMPLATE = """
 <!doctype html>
 <html lang="fa">
@@ -67,10 +65,19 @@ def index():
     answer = None
     if request.method == "POST":
         q = (request.form.get("query") or "").strip()
+
+        # اضافه کردن متن فایل data.txt در صورت وجود
+        context = ""
+        if os.path.exists("data.txt"):
+            with open("data.txt", encoding="utf-8") as f:
+                context = f.read()
+            q = f"{q}\n\nاطلاعات فنی موجود:\n{context}"
+
         messages = history[-6:] + [
             {"role": "system", "content": SYSTEM_PROMPT_FA},
             {"role": "user", "content": q},
         ]
+
         try:
             model_answer = ask_g4f(messages)
         except Exception as e:
@@ -82,9 +89,7 @@ def index():
 
     return render_template_string(HTML_TEMPLATE, answer=answer)
 
-def open_browser():
-    webbrowser.open_new("http://127.0.0.1:5000/")
-
+# ---------------------- اجرا ----------------------
 if __name__ == "__main__":
-    Timer(1, open_browser).start()
-    app.run()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
