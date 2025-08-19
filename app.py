@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 from flask import Flask, request, jsonify, render_template_string
 
 # ---------------------- تنظیمات ----------------------
@@ -10,6 +11,12 @@ SYSTEM_PROMPT_FA = (
 )
 
 # ---------------------- g4f Client ----------------------
+def clean_answer(text: str) -> str:
+    """پاکسازی خروجی مدل از نشانه‌گذاری‌های ناخواسته"""
+    text = re.sub(r"[*#]+", "", text)  # حذف * و #
+    text = re.sub(r"\n\s*\n", "\n", text)  # حذف خطوط خالی اضافی
+    return text.strip()
+
 def ask_g4f(messages):
     try:
         from g4f.client import Client
@@ -20,7 +27,8 @@ def ask_g4f(messages):
             temperature=0.2,
             max_tokens=500,
         )
-        return resp.choices[0].message.content.strip()
+        raw_answer = resp.choices[0].message.content.strip()
+        return clean_answer(raw_answer)
     except Exception as e:
         return f"❌ خطا در ارتباط با g4f: {e}"
 
@@ -41,7 +49,7 @@ h1 { color: #2c3e50; text-align:center; }
 textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
 button { padding: 10px 20px; border:none; border-radius:8px; background:#2980b9; color:#fff; cursor:pointer; }
 button:hover { background:#3498db; }
-.response { background: #ecf0f1; padding: 15px; margin-top: 20px; border-radius: 8px; }
+.response { background: #ecf0f1; padding: 15px; margin-top: 20px; border-radius: 8px; white-space: pre-line; }
 .container { max-width:600px; margin:auto; }
 </style>
 </head>
