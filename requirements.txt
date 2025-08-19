@@ -1,3 +1,4 @@
 Flask
 g4f
 gunicorn
+typing_extensions
